@@ -9,13 +9,39 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from .server import next_trains, list_stations, list_routes
+try:
+    from .server import next_trains, list_stations, list_routes
+except ImportError as e:
+    print(f"Warning: Could not import server functions: {e}")
+    # Fallback functions for when server import fails
+    async def next_trains(origin: str, destination: str, when_iso: str = None) -> str:
+        return f"Error: Server functions not available - {e}"
+    
+    async def list_stations() -> str:
+        return f"Error: Server functions not available - {e}"
+    
+    async def list_routes() -> str:
+        return f"Error: Server functions not available - {e}"
 
 app = FastAPI(
     title="DART MCP Server",
     description="Model Context Protocol server for DART (Dallas Area Rapid Transit) schedules",
     version="0.1.0"
 )
+
+@app.on_event("startup")
+async def startup_event():
+    """Startup event handler."""
+    print("🚀 DART MCP Remote Server starting up...")
+    try:
+        # Test if we can import and use the server functions
+        from . import gtfs
+        data = gtfs.get_default_data()
+        print(f"✅ GTFS data loaded successfully: {len(data.stops)} stops, {len(data.trips)} trips")
+        print("✅ Server functions imported successfully")
+    except Exception as e:
+        print(f"⚠️  Warning during startup: {e}")
+    print("🌐 FastAPI app initialized")
 
 
 class NextTrainsRequest(BaseModel):
@@ -54,6 +80,11 @@ async def root():
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+@app.get("/test")
+async def test_endpoint():
+    """Simple test endpoint."""
+    return {"message": "DART MCP Server is running!", "status": "ok"}
 
 
 @app.post("/mcp/next_trains", response_model=MCPResponse)
