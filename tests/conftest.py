@@ -3,25 +3,25 @@ from io import StringIO
 import pandas as pd
 import pytest
 
-from caltrain_mcp import gtfs
+from dart_mcp import gtfs
 
 
 @pytest.fixture(autouse=True)
 def fake_gtfs(monkeypatch):
-    """Provide a minimal :class:`~caltrain_mcp.gtfs.GTFSData` object for tests."""
+    """Provide a minimal :class:`~dart_mcp.gtfs.GTFSData` object for tests."""
     # --- stops -------------------------------------------------
     stops_csv = """stop_id,stop_name,location_type,parent_station
-100,San Francisco Caltrain,1,
-101,San Francisco Caltrain Platform 1,0,100
-200,Palo Alto,1,
-201,Palo Alto Platform 1,0,200
+DCS,DART CENTRAL STATION,1,
+DCS1,DART CENTRAL STATION Platform 1,0,DCS
+UNI,University,1,
+UNI1,University Platform 1,0,UNI
 """
     all_stops_df = pd.read_csv(StringIO(stops_csv))
     all_stops_df["stop_id"] = all_stops_df["stop_id"].astype(str)
 
     stations_df = all_stops_df[all_stops_df.location_type == 1].copy()
     stations_df["normalized_name"] = (
-        stations_df.stop_name.str.lower().str.replace(" caltrain", "")
+        stations_df.stop_name.str.lower().str.replace(" dart", "")
     )
 
     # --- calendar ---------------------------------------------
@@ -31,13 +31,13 @@ WEEKDAY,1,1,1,1,1,0,0,20250101,20251231
     calendar_df = pd.read_csv(StringIO(cal_csv))
 
     # --- trips -------------------------------------------------
-    trips_csv = "route_id,service_id,trip_id,trip_headsign,trip_short_name\n1,WEEKDAY,T1,San Jose,SJ\n"
+    trips_csv = "route_id,service_id,trip_id,trip_headsign,trip_short_name\n1,WEEKDAY,T1,University,UNI\n"
     trips_df = pd.read_csv(StringIO(trips_csv))
 
     # --- stop_times -------------------------------------------
     st_csv = """trip_id,arrival_time,departure_time,stop_id,stop_sequence
-T1,08:00:00,08:00:00,101,1
-T1,08:50:00,08:50:00,201,2
+T1,08:00:00,08:00:00,DCS1,1
+T1,08:50:00,08:50:00,UNI1,2
 """
     stop_times_df = pd.read_csv(StringIO(st_csv))
     stop_times_df["stop_id"] = stop_times_df["stop_id"].astype(str)

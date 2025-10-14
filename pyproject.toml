@@ -1,20 +1,22 @@
 [project]
-name = "caltrain-mcp"
-dynamic = ["version"]
-description = "Model Context Protocol server for Caltrain schedules"
+name = "dart-mcp"
+version = "0.1.0"
+description = "Model Context Protocol server for DART (Dallas Area Rapid Transit) schedules"
 readme = "README.md"
 authors = [
-    { name = "David Yen", email = "davidyen1124@gmail.com" }
+    { name = "Sandeep Mehta", email = "sandeep@example.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.9"
 dependencies = [
-    "mcp>=1.9.1",
     "pandas>=2.2.3",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
 ]
 
 [project.scripts]
-caltrain-mcp = "caltrain_mcp.server:main"
-caltrain-lint = "scripts.lint:main"
+dart-mcp = "dart_mcp.server:main"
+dart-mcp-server = "dart_mcp.remote_server:main"
+dart-lint = "scripts.lint:main"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
@@ -76,12 +78,9 @@ addopts = [
     "--disable-warnings",
 ]
 
-[tool.hatch.version]
-source = "vcs"
-fallback-version = "0.0.0"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/caltrain_mcp"]
+packages = ["src/dart_mcp"]
 
 [tool.hatch.build.targets.sdist]
 include = [

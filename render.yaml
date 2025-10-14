@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: dart-mcp-server
+    env: python
+    buildCommand: pip install -e .
+    startCommand: uvicorn dart_mcp.remote_server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8000

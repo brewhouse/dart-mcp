@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
-Download the latest Caltrain GTFS feed, unzip, and place it in
-src/caltrain_mcp/data/caltrain-ca-us
+Download the latest DART GTFS feed, unzip, and place it in
+src/dart_mcp/data/dart-tx-us
 """
 
 import io
@@ -11,13 +11,13 @@ import tempfile
 import urllib.request
 import zipfile
 
-GTFS_URL = "https://data.trilliumtransit.com/gtfs/caltrain-ca-us/caltrain-ca-us.zip"
+GTFS_URL = "https://www.dart.org/gtfs/dart-gtfs.zip"
 TARGET_DIR = (
     pathlib.Path(__file__).parent.parent
     / "src"
-    / "caltrain_mcp"
+    / "dart_mcp"
     / "data"
-    / "caltrain-ca-us"
+    / "dart-tx-us"
 )
 
 

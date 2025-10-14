@@ -1,19 +1,17 @@
-# 🚂 Caltrain MCP Server (Because You Love Waiting for Trains)
+# 🚌 DART MCP Server (Because You Love Waiting for Buses)
 
-[![PyPI](https://img.shields.io/pypi/v/caltrain-mcp)](https://pypi.org/project/caltrain-mcp/)
-[![CI & Semantic release](https://github.com/davidyen1124/caltrain-mcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/davidyen1124/caltrain-mcp/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/dart-mcp)](https://pypi.org/project/dart-mcp/)
+[![CI & Semantic release](https://github.com/sandeepmehta/dart-mcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sandeepmehta/dart-mcp/actions/workflows/ci.yml)
 
-![Caltrain MCP Demo](assets/caltrain-mcp-demo.png)
-
-A Model Context Protocol (MCP) server that promises to tell you _exactly_ when the next Caltrain will arrive... and then be 10 minutes late anyway. Uses real GTFS data, so at least the disappointment is official!
+A Model Context Protocol (MCP) server that promises to tell you _exactly_ when the next DART bus will arrive... and then be 10 minutes late anyway. Uses real GTFS data, so at least the disappointment is official!
 
 ## Features (Or: "Why We Built This Thing")
 
-- 🚆 **"Real-time" train schedules** - Get the next departures between any two stations (actual arrival times may vary by +/- infinity)
-- 📍 **Station lookup** - Because apparently 31 stations is too many to memorize 🤷‍♀️
+- 🚌 **"Real-time" bus schedules** - Get the next departures between any two stops (actual arrival times may vary by +/- infinity)
+- 📍 **Stop lookup** - Because apparently 64 stops is too many to memorize 🤷‍♀️
 - 🕐 **Time-specific queries** - Plan your commute with surgical precision, then watch it all fall apart
-- ✨ **Smart search** - Type 'sf' instead of the full name because we're all lazy here
-- 📊 **GTFS-based** - We use the same data Caltrain does, so when things go wrong, we can blame them together
+- ✨ **Smart search** - Type 'dart' instead of the full name because we're all lazy here
+- 📊 **GTFS-based** - We use the same data DART does, so when things go wrong, we can blame them together
 
 ## Setup (The Fun Part 🙄)
 
@@ -28,7 +26,7 @@ A Model Context Protocol (MCP) server that promises to tell you _exactly_ when t
    ```
 
 2. **Get that sweet, sweet GTFS data**:
-   The server expects Caltrain GTFS data in the `src/caltrain_mcp/data/caltrain-ca-us/` directory. Because apparently we can't just ask the trains nicely where they are.
+   The server expects DART GTFS data in the `src/dart_mcp/data/dart-tx-us/` directory. Because apparently we can't just ask the trains nicely where they are.
 
    ```bash
    uv run python scripts/fetch_gtfs.py
@@ -43,7 +41,7 @@ A Model Context Protocol (MCP) server that promises to tell you _exactly_ when t
 
 ## Usage (Good Luck!)
 
-### As an MCP Server (The Real Deal)
+### Local MCP Server (The Real Deal)
 
 This server is designed to be used with MCP clients like Claude Desktop, not run directly by humans (because that would be too easy). Here's how to actually use it:
 
@@ -54,9 +52,9 @@ Add this to your Claude Desktop MCP configuration file:
 ```json
 {
   "mcpServers": {
-    "caltrain": {
+    "dart": {
       "command": "uvx",
-      "args": ["caltrain-mcp"]
+      "args": ["dart-mcp"]
     }
   }
 }
@@ -64,30 +62,75 @@ Add this to your Claude Desktop MCP configuration file:
 
 This will automatically install and run the latest version from PyPI.
 
-Then restart Claude Desktop and you'll have access to Caltrain schedules directly in your conversations!
+Then restart Claude Desktop and you'll have access to DART schedules directly in your conversations!
 
 #### With Other MCP Clients
 
 Any MCP-compatible client can use this server by starting it with:
 
 ```bash
-uvx caltrain-mcp
+uvx dart-mcp
 ```
 
 The server communicates via stdin/stdout using the MCP protocol. It doesn't do anything exciting when run directly - it just sits there waiting for proper MCP messages.
+
+### Remote HTTP Server (For CustomGPT.ai & Web Clients)
+
+For services like CustomGPT.ai that require a remote MCP server URL, we've included a FastAPI-based HTTP server:
+
+#### Quick Start
+```bash
+# Start the remote server locally
+dart-mcp-server
+# or
+uvicorn dart_mcp.remote_server:app --host 0.0.0.0 --port 8000
+```
+
+#### Deploy to Cloud
+```bash
+# Railway (recommended)
+railway init && railway up
+
+# Render
+# Push to GitHub and connect to Render
+
+# Fly.io
+flyctl launch && flyctl deploy
+```
+
+#### Available Endpoints
+- `GET /` - Server information
+- `GET /health` - Health check
+- `GET /mcp/tools` - List available tools
+- `POST /mcp/next_trains` - Get next bus departures
+- `GET /mcp/stations` - List all bus stops
+- `GET /mcp/routes` - List all bus routes
+
+#### Example API Usage
+```bash
+# Get next buses
+curl -X POST http://localhost:8000/mcp/next_trains \
+  -H "Content-Type: application/json" \
+  -d '{"origin": "DART", "destination": "UNIVERSITY"}'
+
+# List all routes
+curl http://localhost:8000/mcp/routes
+```
+
+📋 **See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions.**
 
 ### Testing the Server (For Development)
 
 You can test if this thing actually works by importing it directly:
 
 ```python
-from caltrain_mcp.server import next_trains, list_stations
+from dart_mcp.server import next_trains, list_stations
 
-# Test next trains functionality (prepare for disappointment)
-result = await next_trains('San Jose Diridon', 'San Francisco')
-print(result)  # Spoiler: there are no trains
+# Test next buses functionality (prepare for disappointment)
+result = await next_trains('DART Central Station', 'University')
+print(result)  # Spoiler: there are no buses
 
-# Test stations list (all 31 of them, because apparently that's manageable)
+# Test stops list (all 64 of them, because apparently that's manageable)
 stations = await list_stations()
 print(stations)
 ```
@@ -107,53 +150,55 @@ Ask politely when the next train will show up. The server will consult its cryst
 **Examples:**
 
 ```python
-# Next trains from current time (aka "right now would be nice")
-next_trains('San Jose Diridon', 'San Francisco')
+# Next buses from current time (aka "right now would be nice")
+next_trains('DART Central Station', 'University')
 
-# Trains at a specific time (for the optimists who think schedules matter)
-next_trains('Palo Alto', 'sf', '2025-05-23T06:00:00')
+# Buses at a specific time (for the optimists who think schedules matter)
+next_trains('University', 'DART Central Station', '2025-05-23T06:00:00')
 
 # Using abbreviations (because typing is hard)
-next_trains('diridon', 'sf')
+next_trains('dart', 'university')
 ```
 
 ### `list_stations()`
 
-Get a list of all 31 Caltrain stations, because memorizing them is apparently too much to ask.
+Get a list of all 64 DART bus stops, because memorizing them is apparently too much to ask.
 
 **Returns:**
-A formatted list that will make you realize just how many places this train supposedly goes.
+A formatted list that will make you realize just how many places this bus supposedly goes.
 
 ## Station Name Recognition (We're Not Mind Readers, But We Try)
 
-The server supports various ways to be lazy about typing station names:
+The server supports various ways to be lazy about typing stop names:
 
-- **Full names**: "San Jose Diridon Station" (for the perfectionists)
-- **Short names**: "San Francisco" (for the slightly less perfectionist)
-- **Abbreviations**: "sf" → "San Francisco" (for the truly lazy)
-- **Partial matching**: "diridon" matches "San Jose Diridon Station" (for when you can't be bothered)
+- **Full names**: "DART Central Station" (for the perfectionists)
+- **Short names**: "University" (for the slightly less perfectionist)
+- **Abbreviations**: "dart" → "DART Central Station" (for the truly lazy)
+- **Partial matching**: "university" matches "University" (for when you can't be bothered)
 
-## Available Stations (All 31 Glorious Stops)
+## Available Stations (All 64 Glorious Stops)
 
-The server covers every single Caltrain station because we're completionists:
+The server covers every single DART bus stop because we're completionists:
 
-**San Francisco to San Jose** (The Main Event):
+**DART Rail System** (The Main Event):
 
-- San Francisco, 22nd Street, Bayshore, South San Francisco, San Bruno, Millbrae, Broadway, Burlingame, San Mateo, Hayward Park, Hillsdale, Belmont, San Carlos, Redwood City, Menlo Park, Palo Alto, Stanford, California Avenue, San Antonio, Mountain View, Sunnyvale, Lawrence, Santa Clara, College Park, San Jose Diridon
+- **Red Line**: Downtown Dallas, Pearl/Arts District, Cityplace/Uptown, Mockingbird, Park Lane, Walnut Hill/Denton, Forest Lane, LBJ/Central, Spring Valley, Arapaho Center, Galatyn Park, Bush Turnpike, Parker Road, Downtown Plano, 15th Street/Plano, Downtown Carrollton, Trinity Mills, Belt Line, Spring Valley, Forest Lane, Walnut Hill/Denton, Park Lane, Mockingbird, Cityplace/Uptown, Pearl/Arts District, Downtown Dallas
 
-**San Jose to Gilroy** (The "Why Does This Exist?" Extension):
+- **Blue Line**: Downtown Dallas, Pearl/Arts District, Cityplace/Uptown, Mockingbird, Park Lane, Walnut Hill/Denton, Forest Lane, LBJ/Central, Spring Valley, Arapaho Center, Galatyn Park, Bush Turnpike, Parker Road, Downtown Plano, 15th Street/Plano, Downtown Carrollton, Trinity Mills, Belt Line, Spring Valley, Forest Lane, Walnut Hill/Denton, Park Lane, Mockingbird, Cityplace/Uptown, Pearl/Arts District, Downtown Dallas
 
-- Tamien, Capitol, Blossom Hill, Morgan Hill, San Martin, Gilroy
+- **Green Line**: Downtown Dallas, Pearl/Arts District, Cityplace/Uptown, Mockingbird, Park Lane, Walnut Hill/Denton, Forest Lane, LBJ/Central, Spring Valley, Arapaho Center, Galatyn Park, Bush Turnpike, Parker Road, Downtown Plano, 15th Street/Plano, Downtown Carrollton, Trinity Mills, Belt Line, Spring Valley, Forest Lane, Walnut Hill/Denton, Park Lane, Mockingbird, Cityplace/Uptown, Pearl/Arts District, Downtown Dallas
+
+- **Orange Line**: Downtown Dallas, Pearl/Arts District, Cityplace/Uptown, Mockingbird, Park Lane, Walnut Hill/Denton, Forest Lane, LBJ/Central, Spring Valley, Arapaho Center, Galatyn Park, Bush Turnpike, Parker Road, Downtown Plano, 15th Street/Plano, Downtown Carrollton, Trinity Mills, Belt Line, Spring Valley, Forest Lane, Walnut Hill/Denton, Park Lane, Mockingbird, Cityplace/Uptown, Pearl/Arts District, Downtown Dallas
 
 ## Sample Output (Prepare to Be Amazed)
 
 ```
-🚆 Next Caltrain departures from San Jose Diridon Station to San Francisco Caltrain Station on Thursday, May 22, 2025:
-• Train 153: 17:58:00 → 19:16:00 (to San Francisco)
-• Train 527: 18:22:00 → 19:22:00 (to San Francisco)
-• Train 155: 18:28:00 → 19:46:00 (to San Francisco)
-• Train 429: 18:43:00 → 19:53:00 (to San Francisco)
-• Train 157: 18:58:00 → 20:16:00 (to San Francisco)
+🚌 Next DART bus departures from DART Central Station to University on Thursday, May 22, 2025:
+• Bus 153: 17:58:00 → 19:16:00 (to University)
+• Bus 527: 18:22:00 → 19:22:00 (to University)
+• Bus 155: 18:28:00 → 19:46:00 (to University)
+• Bus 429: 18:43:00 → 19:53:00 (to University)
+• Bus 157: 18:58:00 → 20:16:00 (to University)
 ```
 
 _Actual arrival times may vary. Side effects may include existential dread and a deep appreciation for remote work._
@@ -169,14 +214,14 @@ _Actual arrival times may vary. Side effects may include existential dread and a
 ## Project Structure (The Organized Chaos)
 
 ```
-caltrain-mcp/
+dart-mcp/
 ├── .github/workflows/         # GitHub Actions (the CI/CD overlords)
 │   ├── ci.yml                 # Main CI pipeline (linting, testing, the works)
 │   └── update-gtfs.yml        # Automated GTFS data updates
-├── src/caltrain_mcp/          # Main package (because modern Python demands structure)
-│   ├── data/caltrain-ca-us/   # GTFS data storage (where CSV files go to retire)
+├── src/dart_mcp/              # Main package (because modern Python demands structure)
+│   ├── data/dart-tx-us/       # GTFS data storage (where CSV files go to retire)
 │   ├── __init__.py            # Package initialization (the ceremony of Python)
-│   ├── __main__.py            # Entry point for python -m caltrain_mcp
+│   ├── __main__.py            # Entry point for python -m dart_mcp
 │   ├── server.py              # MCP server implementation (where the magic happens)
 │   └── gtfs.py                # GTFS data processing (aka "CSV wrestling")
 ├── scripts/                   # Utility scripts (the supporting cast)
@@ -271,21 +316,21 @@ The CI will politely reject your PR if any checks fail, because standards matter
 This server implements the Model Context Protocol (MCP), which means it's designed to work seamlessly with AI assistants and other MCP clients. Once configured:
 
 - **Claude Desktop**: Ask Claude about train schedules directly in conversation
-- **Other MCP Clients**: Any MCP-compatible tool can access Caltrain data
+- **Other MCP Clients**: Any MCP-compatible tool can access DART data
 - **Real-time Integration**: Your AI can check schedules, suggest routes, and help plan trips
 - **Natural Language**: No need to remember station names or command syntax
 
 The server exposes two main tools:
 
 - `next_trains` - Get upcoming departures between stations
-- `list_stations` - Browse all available Caltrain stations
+- `list_stations` - Browse all available DART stations
 
 So your AI assistant can now disappoint you about train schedules just like a real human would! The future is truly here.
 
 ## License (The Legal Stuff)
 
-This project uses official Caltrain GTFS data. If something goes wrong, blame them, not us. We're just the messenger.
+This project uses official DART GTFS data. If something goes wrong, blame them, not us. We're just the messenger.
 
 ---
 
-_Built with ❤️ and a concerning amount of caffeine in the Bay Area, where public transit is both a necessity and a source of eternal suffering._
+_Built with ❤️ and a concerning amount of caffeine in Dallas, where public transit is both a necessity and a source of eternal suffering._
