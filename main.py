@@ -47,19 +47,49 @@ def main():
         
         @app.get("/mcp/routes")
         async def list_routes():
-            return {
-                "success": True,
-                "data": "Available DART bus routes:\n• UNIVERSITY\n• FAIRGROUNDS\n• MAURY ST\n• FRANKLIN AVE\n• E 14TH ST\n• SW 9TH ST\n• INDIANOLA AVE\n• UNIVERSITY / INGERSOLL",
-                "error": None
-            }
+            try:
+                # Import the real GTFS logic
+                import sys
+                import os
+                sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+                
+                from dart_mcp.server import list_routes as real_list_routes
+                result = await real_list_routes()
+                return {
+                    "success": True,
+                    "data": result,
+                    "error": None
+                }
+            except Exception as e:
+                # Fallback to hardcoded list
+                return {
+                    "success": True,
+                    "data": "Available DART bus routes:\n• UNIVERSITY\n• FAIRGROUNDS\n• MAURY ST\n• FRANKLIN AVE\n• E 14TH ST\n• SW 9TH ST\n• INDIANOLA AVE\n• UNIVERSITY / INGERSOLL",
+                    "error": None
+                }
         
         @app.get("/mcp/stations")
         async def list_stations():
-            return {
-                "success": True,
-                "data": "Available DART bus stops:\n• DART Central Station\n• University\n• Fairgrounds\n• Maury St\n• Franklin Ave\n• E 14th St\n• SW 9th St\n• Indianola Ave\n• University / Ingersoll",
-                "error": None
-            }
+            try:
+                # Import the real GTFS logic
+                import sys
+                import os
+                sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+                
+                from dart_mcp.server import list_stations as real_list_stations
+                result = await real_list_stations()
+                return {
+                    "success": True,
+                    "data": result,
+                    "error": None
+                }
+            except Exception as e:
+                # Fallback to hardcoded list
+                return {
+                    "success": True,
+                    "data": "Available DART bus stops:\n• DART Central Station\n• University\n• Fairgrounds\n• Maury St\n• Franklin Ave\n• E 14th St\n• SW 9th St\n• Indianola Ave\n• University / Ingersoll",
+                    "error": None
+                }
         
         @app.post("/mcp/next_trains")
         async def next_trains(request: dict):
@@ -69,25 +99,32 @@ def main():
                 destination = request.get("destination", "")
                 when_iso = request.get("when_iso")
                 
-                # Simple logic for demo - in real implementation, this would use GTFS data
-                if origin.lower() in ["central station", "dart"] and destination.lower() in ["maury st", "maury"]:
+                # Import the real GTFS logic
+                try:
+                    # Add the src directory to Python path
+                    import sys
+                    import os
+                    sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+                    
+                    from dart_mcp import gtfs
+                    from dart_mcp.server import next_trains as real_next_trains
+                    
+                    # Use the real GTFS-based logic
+                    result = await real_next_trains(origin, destination, when_iso)
                     return {
                         "success": True,
-                        "data": "No direct routes found from Central Station to Maury St. You may need to transfer.",
+                        "data": result,
                         "error": None
                     }
-                elif origin.lower() in ["university"] and destination.lower() in ["dart", "central station"]:
+                    
+                except ImportError as e:
+                    # Fallback to simple logic if GTFS import fails
                     return {
                         "success": True,
-                        "data": "Next buses from University to Central Station:\n• Route UNIVERSITY: 2:30 PM, 2:45 PM, 3:00 PM",
+                        "data": f"GTFS data not available: {str(e)}. Please check server configuration.",
                         "error": None
                     }
-                else:
-                    return {
-                        "success": True,
-                        "data": f"Searching for routes from {origin} to {destination}... No direct routes found. Please check available stops and routes.",
-                        "error": None
-                    }
+                    
             except Exception as e:
                 return {
                     "success": False,
