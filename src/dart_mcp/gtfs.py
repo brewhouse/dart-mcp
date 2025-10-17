@@ -200,6 +200,58 @@ def get_platform_stops_for_station(station_id: str, data: GTFSData) -> list[str]
     return data.station_to_platform_stops.get(station_id, [])
 
 
+def find_stops_by_name(stop_name: str, data: GTFSData) -> list[dict]:
+    """Find stops by name with fuzzy matching.
+    
+    Args:
+        stop_name: The stop name to search for
+        data: GTFS data
+        
+    Returns:
+        List of stop dictionaries with stop_id and stop_name
+    """
+    if not stop_name:
+        return []
+    
+    stop_name_lower = stop_name.lower().strip()
+    
+    # First try exact match
+    exact_matches = data.all_stops[
+        data.all_stops["stop_name"].str.lower() == stop_name_lower
+    ]
+    
+    if not exact_matches.empty:
+        return [
+            {"stop_id": row["stop_id"], "stop_name": row["stop_name"]}
+            for _, row in exact_matches.iterrows()
+        ]
+    
+    # Try partial matches
+    partial_matches = data.all_stops[
+        data.all_stops["stop_name"].str.lower().str.contains(stop_name_lower, na=False)
+    ]
+    
+    if not partial_matches.empty:
+        return [
+            {"stop_id": row["stop_id"], "stop_name": row["stop_name"]}
+            for _, row in partial_matches.iterrows()
+        ]
+    
+    # Try abbreviation matching for common terms
+    abbreviations = {
+        "dart": "dart central station",
+        "central": "dart central station", 
+        "dt": "dart central station",
+        "downtown": "dart central station"
+    }
+    
+    if stop_name_lower in abbreviations:
+        expanded_name = abbreviations[stop_name_lower]
+        return find_stops_by_name(expanded_name, data)
+    
+    return []
+
+
 def time_to_seconds(time_str: str | None) -> int | None:
     """Convert HH:MM:SS to seconds since midnight."""
     if pd.isna(time_str) or not time_str:
