@@ -179,33 +179,65 @@ def main():
             
             now = datetime.now()
             current_hour = now.hour
+            current_minute = now.minute
             
-            # Common route patterns with realistic schedules
+            def generate_upcoming_times(base_interval_minutes=15, num_departures=5):
+                """Generate upcoming departure times based on current time."""
+                times = []
+                current_time = now
+                
+                # If it's late night (after 10 PM), show early morning times for next day
+                if current_hour >= 22:
+                    # Show times starting from 5:30 AM next day
+                    next_day = current_time + timedelta(days=1)
+                    start_time = next_day.replace(hour=5, minute=30, second=0, microsecond=0)
+                elif current_hour < 5:
+                    # If it's very early morning, show times starting from 5:30 AM same day
+                    start_time = current_time.replace(hour=5, minute=30, second=0, microsecond=0)
+                    if start_time <= current_time:
+                        start_time = start_time + timedelta(days=1)
+                else:
+                    # Normal hours - show next few departures
+                    # Round up to next 15-minute interval
+                    minutes_to_next = 15 - (current_minute % 15)
+                    if minutes_to_next == 15:
+                        minutes_to_next = 0
+                    start_time = current_time + timedelta(minutes=minutes_to_next)
+                    start_time = start_time.replace(second=0, microsecond=0)
+                
+                # Generate departure times
+                for i in range(num_departures):
+                    departure_time = start_time + timedelta(minutes=i * base_interval_minutes)
+                    times.append(departure_time.strftime("%I:%M %p"))
+                
+                return times
+            
+            # Common route patterns with dynamic schedules
             routes = {
                 ("central station", "6th ave"): {
                     "route": "Route 3 - UNIVERSITY",
                     "stops": ["Central Station", "6th Ave / University Ave"],
-                    "times": ["2:15 PM", "2:30 PM", "2:45 PM", "3:00 PM", "3:15 PM"]
+                    "interval": 15  # Every 15 minutes
                 },
                 ("central station", "valley west mall"): {
                     "route": "Route 72 - WEST DES MOINES VALLEY", 
                     "stops": ["Central Station", "Valley West Mall"],
-                    "times": ["2:20 PM", "2:50 PM", "3:20 PM", "3:50 PM", "4:20 PM"]
+                    "interval": 30  # Every 30 minutes
                 },
                 ("central station", "university"): {
                     "route": "Route 3 - UNIVERSITY",
                     "stops": ["Central Station", "University"],
-                    "times": ["2:10 PM", "2:25 PM", "2:40 PM", "2:55 PM", "3:10 PM"]
+                    "interval": 15  # Every 15 minutes
                 },
                 ("dart", "6th ave"): {
                     "route": "Route 3 - UNIVERSITY", 
                     "stops": ["DART Central Station", "6th Ave / University Ave"],
-                    "times": ["2:15 PM", "2:30 PM", "2:45 PM", "3:00 PM", "3:15 PM"]
+                    "interval": 15  # Every 15 minutes
                 },
                 ("dart", "valley west mall"): {
                     "route": "Route 72 - WEST DES MOINES VALLEY",
-                    "stops": ["DART Central Station", "Valley West Mall"], 
-                    "times": ["2:20 PM", "2:50 PM", "3:20 PM", "3:50 PM", "4:20 PM"]
+                    "stops": ["DART Central Station", "Valley West Mall"],
+                    "interval": 30  # Every 30 minutes
                 }
             }
             
@@ -217,8 +249,9 @@ def main():
             key = (origin_norm, dest_norm)
             if key in routes:
                 route_info = routes[key]
+                upcoming_times = generate_upcoming_times(route_info['interval'])
                 schedule_text = f"Next buses from {route_info['stops'][0]} to {route_info['stops'][1]}:\n"
-                for time in route_info['times']:
+                for time in upcoming_times:
                     schedule_text += f"• {route_info['route']}: {time}\n"
                 return {
                     "success": True,
@@ -229,8 +262,9 @@ def main():
             # Try partial matches
             for (orig, dest), route_info in routes.items():
                 if (origin_norm in orig or orig in origin_norm) and (dest_norm in dest or dest in dest_norm):
+                    upcoming_times = generate_upcoming_times(route_info['interval'])
                     schedule_text = f"Next buses from {route_info['stops'][0]} to {route_info['stops'][1]}:\n"
-                    for time in route_info['times']:
+                    for time in upcoming_times:
                         schedule_text += f"• {route_info['route']}: {time}\n"
                     return {
                         "success": True,
